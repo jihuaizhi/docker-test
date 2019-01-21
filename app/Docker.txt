@@ -11,6 +11,10 @@ Colours	640x480  800x600  1024x768  1152x864  1280x1024  1600x1200
 $sudo update-grub
 $sudo reboot
 
+//压缩文件夹
+sudo tar zcvf work.tar.gz work/
+//解压缩文件
+tar xzvf work.tar.gz
 
 
 //安装apache
@@ -85,7 +89,7 @@ mysql> select user, plugin from mysql.user;
 | debian-sys-maint | mysql_native_password |
 +------------------+-----------------------+
 4 rows in set (0.00 sec)
-mysql> update mysql.user set authentication_string=PASSWORD('123456'), plugin='mysql_native_password' where user='root';
+mysql> update mysql.user set plugin='mysql_native_password' where user='root';
 mysql> flush privileges;
 mysql> exit
 Bye
@@ -268,9 +272,26 @@ docker run \
  --restart=always \
  -p 8081:80 \
  -d \
- -v dv-jhz-apache-html:/usr/local/apache2/htdocs \
+ -v /var/app/apache2_data:/usr/local/apache2/htdocs \
+ 
  -v dv-jhz-apache-logs:/usr/local/apache2/logs \
- -v dv-jhz-apache-conf:/usr/local/apache2/conf \
+ 
+ 
+ -v /app/data:/usr/local/apache2/conf \
+ 
+ httpd:2.4.34-alpine \
+ httpd -DFOREGROUND
+ 
+ 
+ 
+ docker run \
+ --name jhz_apache1 \
+ --restart=always \
+ -p 8082:80 \
+ -d \
+ -v /app/aaa:/usr/local/apache2/htdocs \
+ -v /app/bbb:/usr/local/apache2/logs \
+ -v /app/ccc:/usr/local/apache2/conf \
  httpd:2.4.34-alpine \
  httpd -DFOREGROUND
  
@@ -344,12 +365,14 @@ docker run \
  -p 8084:80 \
  -p 3307:3306 \
  -p 5023:22 \
- -d\
+ -d \
  -v dv-jump-apache-www:/var/www/html \
  -v dv-jump-apache-conf:/etc/apache2 \
  -v dv-jump-mysql-data:/var/lib/mysql \
  -v dv-jump-mysql-conf:/etc/mysql \
- juamp:1.5 bash /etc/start-service.sh
+ juamp:1.2 /bin/bash
+
+ /etc/start-service.sh
  
 sudo docker exec -it juamp /etc/init.d/mysql restart 
 sudo docker exec -it juamp /etc/init.d/apache2 restart
@@ -357,19 +380,133 @@ sudo docker exec -it juamp /etc/init.d/ssh restart
 sudo docker exec -it juamp /bin/bash
  
 
-**************************************************************  ubuntu18  ****************************************************************
+**************************************************************  ubuntu16 php集成部署环境 ****************************************************************
 
 docker run \
- --name uuu \
- -itd \
- ubuntu:18.04 /bin/bash
+ --name fusion_plantform \
+ -p 8081:80 \
+ -p 3307:3306 \
+ -p 5023:22 \
+ -itd  \
+ ubuntu:16.04 /bin/bash
+ 
+//进入容器内部开始安装环境
+docker exec -it fusion_plantform  /bin/bash 
+
+
 
 apt update
 apt upgrade
 apt clean
 apt autoclean
 apt autoremove
-apt install apache2.4
+
+//设置字符集  可选
+apt install language-pack-en-base
+locale-gen en_US.UTF-8
+apt install software-properties-common
+LC_ALL=en_US.UTF-8 add-apt-repository ppa:ondrej/php
+
+
+//安装文本编辑器
+apt install vim
+
+//安装apache2
+apt install apache2
+//配置apache2 
+vim /etc/apache2/apache2.conf //编辑配置文件,在空白处添加下面的配置
+ServerName localhost
+//启动apache2
+service apache2  restart
+//测试apache2 访问apache 显示 Apache2 Ubuntu Default Page
+http://192.168.7.227:8081/
+//查看aapche版本
+Apache2 -v
+
+//安装mysql5.7
+apt install mysql-server mysql-client libmysqlclient-dev
+//启动mysql报错：No directory, logging in with HOME=/ 解决办法
+usermod -d /var/lib/mysql/ mysql   #第一步
+ln -s /var/lib/mysql/mysql.sock /tmp/mysql.sock   #第二步
+chown -R mysql:mysql /var/lib/mysql   #第三步
+//后期挂载数据目录到卷的时候默认docker是由root用户操作，因此mysql用户需要加入root组才能正常访问这个目录
+usermod -a -G root mysql
+//登录mysql 修改远程登录
+$ mysql -uroot -p
+mysql> grant all on *.* to root@'%' identified by '123456' with grant option;
+mysql> flush privileges;
+mysql> exit
+# 修改配置文件，注释掉bind-address = 127.0.0.1
+vim /etc/mysql/mysql.conf.d/mysqld.cnf
+//重启数据库
+/etc/init.d/mysql restart
+//生产环境设置数据库安全(可选)
+mysql_secure_installation
+
+//安装php7
+apt install php
+//安装apache的php模块
+apt install libapache2-mod-php
+//建立php文件 phpinfo.php
+<?php
+ phpinfo(); 
+?>
+//测试aapche和php整合结果,访问以下地址,显示php配置信息页面
+http://192.168.7.227:8081/phpinfo.php
+//安装php扩展
+apt install php7.0-fpm php7.0-mysql php7.0-common php7.0-curl php7.0-cli php7.0-mcrypt php7.0-mbstring php7.0-dom
+apt install php-zip php7.0-xml php7.0-json php7.0-gd
+//查看已经安装的php模块
+php -m
+
+//重启容器,确认各种服务正常访问
+docker restart  fusion_plantform
+docker exec -it fusion_plantform service apache2 restart //在容器外启动apache服务
+docker exec -it fusion_plantform service mysql restart    //在容器外启动mysql服务
+//将容器提交为镜像
+docker commit fusion_plantform fff:1.0
+
+//从镜像启动新容器
+docker run \
+ --name fff2 \
+ -p 8082:80 \
+ -p 3308:3306 \
+ -p 5024:22 \
+ -itd  \
+ -v fp-apache-www:/var/www/html \
+ -v fp-apache-conf:/etc/apache2 \
+ -v fp-mysql-data:/var/lib/mysql \
+ fff:1.0 /bin/bash
+//启动服务 //在容器外启动apache服务  //在容器外启动mysql服务
+docker exec -it fff2 service apache2 restart 
+docker exec -it fff2 service mysql restart   
+
+//安装composer工具
+apt install composer
+//下载laravel依赖
+composer global require "laravel/installer"
+# 修改环境变量,将laravel命令加到PATH末尾
+export PATH=$PATH:~/.composer/vendor/bin
+//创建测试项目 laravel5.5
+composer create-project --prefer-dist laravel/laravel blog 5.5
+
+
+
+
+**************************************************************  ubuntu18 java集成部署环境 ****************************************************************
+
+docker run  --name java_evn  -itd  ubuntu:18.04 /bin/bash
+
+ 
+ docker exec -it java_evn  /bin/bash 
+
+
+apt update
+apt upgrade
+apt clean
+apt autoclean
+apt autoremove
+apt install apache2
 apt install php7
 apt install mysql-server
 //启动mysql报错：No directory, logging in with HOME=/ 解决办法
@@ -377,17 +514,69 @@ usermod -d /var/lib/mysql/ mysql   #第一步
 ln -s /var/lib/mysql/mysql.sock /tmp/mysql.sock   #第二步
 chown -R mysql:mysql /var/lib/mysql   #第三步
 //后期挂载数据目录到卷的时候默认docker是由root用户操作，因此mysql用户需要加入root组才能正常访问这个目录
-user -a -G root mysql
+usermod -a -G root mysql
+
+
+
+
+
 
 **************************************************************  gitlab  ****************************************************************
-
-sudo docker run --detach \
+#1.创建容器
+docker run --detach \
     --hostname gitlab.example.com \
-    --publish 443:443 --publish 8081:80 --publish 23:22 \
+    --publish 444:443 --publish 8081:80 --publish 23:22 \
     --name gitlab \
     --restart always \
     --volume /srv/gitlab/config:/etc/gitlab \
     --volume /srv/gitlab/logs:/var/log/gitlab \
     --volume /srv/gitlab/data:/var/opt/gitlab \
     gitlab/gitlab-ce:latest
+
+#2.初始化密码
+docker exec -it gitlab /bin/bash  //进入容器
+cd /opt/gitlab/bin //切换目录    
+gitlab-rails console production //进入git控制台
+u=User.where(id:1).first //查找与切换账号（User.all 可以查看所有用户）
+u.password='12345678'   //设置密码为12345678
+u.password_confirmation='12345678'    //再次确认密码
+u.save!      //保存变更
+exit          //退出git控制台
+
+#3.修改配置文件
+vim /gitlab/config/gitlab.rb
+
+external_url 'http://IP:8082'
+gitlab_rails['gitlab_shell_ssh_port'] = 24
+nginx['listen_port'] = 80
+
+#4.重启容器
+
+
+**************************************************************  portainer  ****************************************************************
+#docker容器管理UI工具
+docker run -d -p 9000:9000 \
+    --restart=always \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    --name prtainer-test \
+    portainer/portainer
+    
+**************************************************************  tomcat8  ****************************************************************
+docker run -it  -p 8888:8080 tomcat:8.0
+
+**************************************************************  redmine  ****************************************************************
+
+docker run -d --name some-mysql  -p 3308:3306 -e MYSQL_ROOT_PASSWORD=123456 -e MYSQL_DATABASE=redmine mysql:5.6
+docker run -d --name some-redmine -p 3000:3000 --link some-mysql:mysql redmine
+
+**************************************************************  bitnami/redmine ****************************************************************
+
+curl -sSL https://raw.githubusercontent.com/bitnami/bitnami-docker-redmine/master/docker-compose.yml > docker-compose.yml
+$ docker-compose up -d
+
+
+
+**************************************************************  seafile ****************************************************************
+
+
 
