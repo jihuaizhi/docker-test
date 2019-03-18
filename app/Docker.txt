@@ -1,3 +1,18 @@
+页面样式优化
+1.教师端和管理员端的顶端标题行背景色改为和学生端一致
+2.右上角的用户信息显示中文的姓名字段，而不是账号字段
+3.学生端的顶端三字样式的图标取消
+4.欢迎页浏览器标题和小图标要用项目内默认的图标和系统标题
+5.用户列表的在线状态字段显示错误，在线离线 或者改为用户状态 黑名单 正常 永久有效
+6.所有表格序号字段统一宽度 居中对齐
+7.所有模态框顶端要有标题行，右上角要有关闭按钮X
+8.账号管理的字段顺序需要调整
+9.镜像管理，再次点击镜像上传的时候，上一次的输入未清空
+10.大屏投放，已发布的比赛应该可以进入大屏
+11.性能监控，超过90%资源利用率的时候应该显示红色告警
+12.性能监控，从界面上看，虚拟机开启
+
+
 //修改ubuntu分辨率
 VMware中的Ubuntu Server的控制台窗口有点儿小，使用起来不太方便，要调整控制台的窗口大小，需要修改屏幕的分辨率，修改方法如下：（参见Reference）
  1. 打开grub文件($sudo vim /etc/default/grub), 修改参数
@@ -493,33 +508,6 @@ composer create-project --prefer-dist laravel/laravel blog 5.5
 
 
 
-**************************************************************  ubuntu18 java集成部署环境 ****************************************************************
-
-docker run  --name java_evn  -itd  ubuntu:18.04 /bin/bash
-
- 
- docker exec -it java_evn  /bin/bash 
-
-
-apt update
-apt upgrade
-apt clean
-apt autoclean
-apt autoremove
-apt install apache2
-apt install php7
-apt install mysql-server
-//启动mysql报错：No directory, logging in with HOME=/ 解决办法
-usermod -d /var/lib/mysql/ mysql   #第一步
-ln -s /var/lib/mysql/mysql.sock /tmp/mysql.sock   #第二步
-chown -R mysql:mysql /var/lib/mysql   #第三步
-//后期挂载数据目录到卷的时候默认docker是由root用户操作，因此mysql用户需要加入root组才能正常访问这个目录
-usermod -a -G root mysql
-
-
-
-
-
 
 **************************************************************  gitlab  ****************************************************************
 #1.创建容器
@@ -561,8 +549,7 @@ docker run -d -p 9000:9000 \
     --name prtainer-test \
     portainer/portainer
     
-**************************************************************  tomcat8  ****************************************************************
-docker run -it  -p 8888:8080 tomcat:8.0
+
 
 **************************************************************  redmine  ****************************************************************
 
@@ -576,7 +563,55 @@ $ docker-compose up -d
 
 
 
-**************************************************************  seafile ****************************************************************
+**************************************************************  cyberzone-nvmp ****************************************************************
+
+
+docker run -itd --name nvmp -p 80:80 \
+-v /app/src/:/var/www/ \
+php:7.1-apache /bin/bash 
+
+-v /app/apache2:/etc/apache2 \
+-v /app/log:/var/log/apache2 \
+
+
+
+docker run -d -p 80:80 --name cyberzone-nvmp --privileged=true \
+-v /app/src:/var/www \
+-v /app/log:/var/log/apache2 \
+cyberzone-nvmp 
+
+
+
+
+docker cp ./sites-enabled/000-default.conf nvmp:/etc/apache2/sites-enabled/000-default.conf
+docker cp ./sites-available/000-default.conf nvmp:/etc/apache2/sites-available/000-default.conf
+docker cp apache2.conf nvmp:/etc/apache2/apache2.conf
+
+
+Dockerfile
+
+FROM php:7.1-apache
+
+
+
+
+Volume /var/www
+Volume /etc/apache2
+
+
+COPY /etc/apache2/httpd.conf /app/httpd.conf
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
