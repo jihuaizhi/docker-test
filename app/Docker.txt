@@ -563,7 +563,17 @@ $ docker-compose up -d
 
 
 **************************************************************  cyberzone-e ****************************************************************
-docker run --name Fusion_Platform --restart=always --privileged=true -p 80:80 -p 3306:3306 -p 5552:5552 -p 443:443 -itd -v dv-Fusion_Platform-apache-www:/var/www -v dv-Fusion_Platform-mysql-data:/var/lib/mysql -v dv-Fusion_Platform-home:/home -v /etc/timezone:/etc/timezone -v /etc/localtime:/etc/localtime 192.168.6.3:5000/cze_jre_cifs_auto_proxy /app/auto_service.sh
+docker run --name cze-f-video --restart=always --privileged=true -p 80:80 -p 3306:3306 -p 5552:5552 -p 443:443 -itd \
+-v dv-Fusion_Platform-apache-www:/var/www \
+-v dv-Fusion_Platform-mysql-data:/var/lib/mysql \
+-v dv-Fusion_Platform-home:/home \
+-v /etc/timezone:/etc/timezone \
+-v /etc/localtime:/etc/localtime \
+192.168.6.3:5000/cze_jre_cifs_auto_proxy \
+/app/auto_service.sh
+
+
+docker cp auto_service.sh Fusion_Platform:/app/auto_service.sh
 
 git clone http://192.168.8.2/root/Fusion_Platform /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform
 
@@ -571,6 +581,12 @@ chmod -R 777 /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_
 chmod -R 777 /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/bootstrap/cache
 
 ln -s /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/storage/ /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/public/
+
+
+scp root@192.168.8.2:/mnt/XXXXXX/storage /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/
+
+
+
 
 
 **************************************************************  cyberzone-nvmp ****************************************************************
@@ -584,7 +600,14 @@ docker run -d -p 80:80 --name cyberzone-nvmp --privileged=true \
 
 
 
+192.168.50.43
+root
+shenxinfu123qaz
 
+uname -a
+Linux host-6c92bf51e6be 3.10.0 #1 SMP Fri Jun 22 18:26:33 CST 2018 x86_64 GNU/Linux
+cat /proc/version
+Linux version 3.10.0 (root@39e380a2755f) (gcc version 4.7.2 (Debian 4.7.2-5) ) #1 SMP Fri Jun 22 18:26:33 CST 2018
 
 
 
