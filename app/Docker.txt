@@ -593,10 +593,15 @@ scp root@192.168.8.2:/mnt/XXXXXX/storage /var/lib/docker/volumes/dv-Fusion_Platf
 
 -v /app/apache2:/etc/apache2 \
 
-docker run -d -p 80:80 --name cyberzone-nvmp --privileged=true \
+docker run -d -p 8081:80 --name cyberzone-nvmp --privileged=true \
 -v /app/src:/var/www \
 -v /app/log:/var/log/apache2 \
 192.168.6.3:5000/cyberzone-nvmp
+
+docker run -p 6380:6379 --name nvmp-redis -d redis
+
+
+
 
 
 
