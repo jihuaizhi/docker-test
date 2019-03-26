@@ -513,13 +513,39 @@ composer create-project --prefer-dist laravel/laravel blog 5.5
 #1.创建容器
 docker run --detach \
     --hostname gitlab.example.com \
-    --publish 444:443 --publish 8081:80 --publish 23:22 \
+    --publish 444:443 --publish 8082:80 --publish 23:22 \
     --name gitlab \
     --restart always \
     --volume /srv/gitlab/config:/etc/gitlab \
     --volume /srv/gitlab/logs:/var/log/gitlab \
     --volume /srv/gitlab/data:/var/opt/gitlab \
     gitlab/gitlab-ce:latest
+
+docker run --detach \
+    --hostname gitlab.example.com \
+    --publish 444:443 --publish 8083:80 --publish 23:22 \
+    --name gitlab \
+    --restart always \
+    --volume /srv/gitlab/config:/etc/gitlab \
+    --volume /srv/gitlab/logs:/var/log/gitlab \
+    --volume /srv/gitlab/data:/var/opt/gitlab \
+    gitlab/gitlab-ce:11.6.0-ce.0 
+
+
+sudo docker run --detach \
+  --hostname gitlab.example.com \
+  --env GITLAB_OMNIBUS_CONFIG="external_url 'http://192.168.48.131:8083/'; gitlab_rails['lfs_enabled'] = true;" \
+  --publish 443:443 --publish 80:80 --publish 22:22 \
+  --name gitlab \
+  --restart always \
+  --volume /srv/gitlab/config:/etc/gitlab \
+  --volume /srv/gitlab/logs:/var/log/gitlab \
+  --volume /srv/gitlab/data:/var/opt/gitlab \
+  gitlab/gitlab-ce:11.6.0-ce.0 
+  
+  
+  
+  
 
 #2.初始化密码
 docker exec -it gitlab /bin/bash  //进入容器
