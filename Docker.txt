@@ -1,0 +1,595 @@
+页面样式优化
+1.教师端和管理员端的顶端标题行背景色改为和学生端一致
+2.右上角的用户信息显示中文的姓名字段，而不是账号字段
+3.学生端的顶端三字样式的图标取消
+4.欢迎页浏览器标题和小图标要用项目内默认的图标和系统标题
+5.用户列表的在线状态字段显示错误，在线离线 或者改为用户状态 黑名单 正常 永久有效
+6.所有表格序号字段统一宽度 居中对齐
+7.所有模态框顶端要有标题行，右上角要有关闭按钮X
+8.账号管理的字段顺序需要调整
+9.镜像管理，再次点击镜像上传的时候，上一次的输入未清空
+10.大屏投放，已发布的比赛应该可以进入大屏
+11.性能监控，超过90%资源利用率的时候应该显示红色告警
+12.性能监控，从界面上看，虚拟机开启
+
+
+//修改ubuntu分辨率
+VMware中的Ubuntu Server的控制台窗口有点儿小，使用起来不太方便，要调整控制台的窗口大小，需要修改屏幕的分辨率，修改方法如下：（参见Reference）
+ 1. 打开grub文件($sudo vim /etc/default/grub), 修改参数
+GRUB_CMDLINE_LINUX="vga=0x317", 参数值参考下图：
+Colours	640x480  800x600  1024x768  1152x864  1280x1024  1600x1200
+256 色	0x301	 0x303    0x305	    0x161	  0x307      0x31C
+32k 色	0x310	 0x313	  0x316	    0x162	  0x319	     0x31D
+64k 色	0x311	 0x314	  0x317	    0x163	  0x31A	     0x31E
+16m 色	0x312	 0x315	  0x318	    ?	      0x31B	     0x31F
+
+$sudo update-grub
+$sudo reboot
+
+//压缩文件夹
+sudo tar zcvf work.tar.gz work/
+//解压缩文件
+tar xzvf work.tar.gz
+
+
+//安装apache
+sudo apt install apache2
+
+//主要配置文件目录： / etc / apache2 / 
+//主配置文件： /etc/apache2/apache2.conf 
+//其他配置片段： / etc / apache2 / conf-available /和/ etc / apache2 / conf-enabled / 
+//每个站点的虚拟主机配置片段： / etc / apache2 / sites-available /和/ etc / apache2 / sites-enabled / 
+//用于加载模块的配置片段： / etc / apache2 / mods-available /和/ etc / apache2 / mods-enabled / 
+//Web DocumentRoot： / var / www / html / 
+//日志文件（错误和访问日志）目录： / var / log / apache / 
+
+
+//操作apache
+sudo systemctl status apache2
+sudo systemctl stop apache2
+sudo systemctl start apache2
+sudo systemctl restart apache2
+sudo systemctl reload apache2
+sudo systemctl enable apache2
+sudo systemctl disable apache2
+/etc/init.d/apache2 start
+
+
+//安装配置ssh服务
+https://www.cnblogs.com/hslzju/p/5839913.html
+apt install openssh-server
+//修改配置文件
+root@ea153153c883:/etc/ssh# 
+vim /etc/ssh/sshd_config 
+sshd_config 这里先修改两处：
+PermitRootLogin without-password 改为 PermitRootLogin yes
+#PasswordAuthentication yes 改为 PasswordAuthentication yes
+//重启服务
+service ssh start
+//设置root密码
+passwd root
+//生成公钥
+ssh-keygen -t rsa
+//在远程机器上登录
+ssh root@172.17.0.2
+
+
+//设置防火墙允许端口
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw  reload
+
+
+//编辑ubuntu的host文件
+sudo vim /etc/hosts
+192.168.56.101 howtoing.local
+
+
+//Ubuntu18.04安装mysql5.7
+sudo apt install mysql-server mysql-client libmysqlclient-dev
+# 检查状态
+sudo netstat -tap | grep mysql
+#设置root密码
+//mysql5.7安装完成后普通用户不能进mysql，原因：root的plugin被修改成了auth_socket，用密码登陆的plugin应该是mysql_native_password，直接用root权限登录就不用密码,修改root密码和登录验证方式：
+$ sudo su
+# mysql
+mysql>
+mysql> select user, plugin from mysql.user;
++------------------+-----------------------+
+| user             | plugin                |
++------------------+-----------------------+
+| root             | auth_socket           |
+| mysql.session    | mysql_native_password |
+| mysql.sys        | mysql_native_password |
+| debian-sys-maint | mysql_native_password |
++------------------+-----------------------+
+4 rows in set (0.00 sec)
+mysql> update mysql.user set plugin='mysql_native_password' where user='root';
+mysql> flush privileges;
+mysql> exit
+Bye
+# exit
+$ sudo /etc/init.d/mysql restart
+$ mysql -uroot -p
+1.3配置mysql远程登录
+# 修改配置文件，注释掉bind-address = 127.0.0.1
+$ sudo vi /etc/mysql/mysql.conf.d/mysqld.cnf
+# 保存退出，然后进入mysql服务，执行授权命令：
+$ mysql -uroot -p
+mysql> grant all on *.* to root@'%' identified by '123456' with grant option;
+Query OK, 0 rows affected, 1 warning (0.00 sec)
+mysql> flush privileges;
+Query OK, 0 rows affected (0.00 sec)
+mysql> exit
+Bye
+$ sudo /etc/init.d/mysql restart
+
+//安装mysql主从复制
+https://www.cnblogs.com/gl-developer/p/6170423.html
+//解决克隆server导致UUID冲突问题
+https://blog.csdn.net/helloxiaozhe/article/details/81150763
+//解决主从同步错误
+http://www.jquerycn.cn/a_24338
+//设置复制范围
+# 不同步哪些数据库  
+binlog-ignore-db = mysql  
+binlog-ignore-db = test  
+binlog-ignore-db = information_schema  
+  # 只同步哪些数据库，除此之外，其他不同步  
+binlog-do-db = game  
+
+//安装nginx
+sudo apt install nginx
+//nginx配置
+配置文件：/etc/nginx/
+主程序文件：/usr/sbin/nginx
+Web默认目录：/usr/share/nginx/http/
+日志目录：/var/log/nginx/
+//操作nginx
+service nginx start
+service nginx stop
+//查看进程
+ps -ef | grep nginx
+
+
+
+//设置静态IP
+ens33:
+addresses: [192.168.1.20/24]
+dhcp4: false
+gateway4: 192.168.1.1
+nameservers:
+addresses: [192.168.1.1]
+optional: true
+version: 2
+
+
+
+//Docker中国 
+https://www.docker-cn.com/
+//安装docker
+https://blog.csdn.net/pushiqiang/article/details/78682323
+//删除镜像
+docker rmi 镜像ID/名称
+//查看运行的容器 -a 所有 -q 显示ID
+docker ps -a
+//启动已被停止的容器myrunoob
+docker start myrunoob
+//停止运行中的容器myrunoob
+docker stop myrunoob
+//重启容器myrunoob
+docker restart myrunoob
+//删除容器
+docker rm 容器ID/名称
+//批量停止容器
+sudo docker stop $(sudo docker ps -a -q)
+//批量删除容器
+sudo docker rm $(sudo docker ps -a -q)
+ifconf
+Commands:
+    attach    Attach to a running container                 # 当前 shell 下 attach 连接指定运行镜像
+    build     Build an image from a Dockerfile              # 通过 Dockerfile 定制镜像
+    commit    Create a new image from a container's changes # 提交当前容器为新的镜像
+    cp        Copy files/folders from the containers filesystem to the host path
+              # 从容器中拷贝指定文件或者目录到宿主机中
+    create    Create a new container                        # 创建一个新的容器，同 run，但不启动容器
+    diff      Inspect changes on a container's filesystem   # 查看 docker 容器变化
+    events    Get real time events from the server          # 从 docker 服务获取容器实时事件
+    exec      Run a command in an existing container        # 在已存在的容器上运行命令
+    export    Stream the contents of a container as a tar archive   
+              # 导出容器的内容流作为一个 tar 归档文件[对应 import ]
+    history   Show the history of an image                  # 展示一个镜像形成历史
+    images    List images                                   # 列出系统当前镜像
+    import    Create a new filesystem image from the contents of a tarball  
+              # 从tar包中的内容创建一个新的文件系统映像[对应 export]
+    info      Display system-wide information               # 显示系统相关信息
+    inspect   Return low-level information on a container   # 查看容器详细信息
+    kill      Kill a running container                      # kill 指定 docker 容器
+    load      Load an image from a tar archive              # 从一个 tar 包中加载一个镜像[对应 save]
+    login     Register or Login to the docker registry server   
+              # 注册或者登陆一个 docker 源服务器
+    logout    Log out from a Docker registry server         # 从当前 Docker registry 退出
+    logs      Fetch the logs of a container                 # 输出当前容器日志信息
+    port      Lookup the public-facing port which is NAT-ed to PRIVATE_PORT
+              # 查看映射端口对应的容器内部源端口
+    pause     Pause all processes within a container        # 暂停容器
+    ps        List containers                               # 列出容器列表
+    pull      Pull an image or a repository from the docker registry server
+              # 从docker镜像源服务器拉取指定镜像或者库镜像
+    push      Push an image or a repository to the docker registry server
+              # 推送指定镜像或者库镜像至docker源服务器
+    restart   Restart a running container                   # 重启运行的容器
+    rm        Remove one or more containers                 # 移除一个或者多个容器
+    rmi       Remove one or more images                 
+              # 移除一个或多个镜像[无容器使用该镜像才可删除，否则需删除相关容器才可继续或 -f 强制删除]
+    run       Run a command in a new container
+              # 创建一个新的容器并运行一个命令
+    save      Save an image to a tar archive                # 保存一个镜像为一个 tar 包[对应 load]
+    search    Search for an image on the Docker Hub         # 在 docker hub 中搜索镜像
+    start     Start a stopped containers                    # 启动容器
+    stop      Stop a running containers                     # 停止容器
+    tag       Tag an image into a repository                # 给源中镜像打标签
+    top       Lookup the running processes of a container   # 查看容器中运行的进程信息
+    unpause   Unpause a paused container                    # 取消暂停容器
+    version   Show the docker version information           # 查看 docker 版本号
+    wait      Block until a container stops, then print its exit code   
+
+容器有自己的内部网络和 ip 地址（使用 docker inspect 可以获取所有的变量，Docker 还可以有一个可变的网络配置。）
+-p 标记可以多次使用来绑定多个端口
+
+
+//安装docker compose  官网：https://docs.docker.com/compose/install/#install-compose
+sudo curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+docker-compose --version
+docker-compose version 1.22.0, build f46880fe
+  
+
+//更新运行中的Docker容器重启策略	
+docker update --restart=always <CONTAINER ID>
+
+//查看容器信息
+docker inspect 容器ID/名称
+
+//创建网络 --subnet=子网段 
+docker network 网络名称
+docker network create --subnet=172.0.0.0/16 amnp-net
+
+//将容器加入网络
+docker network connect 网络名称 容器ID/名称 
+
+ **************************************************************  数据卷  ****************************************************************
+//创建数据卷容器(/data目录为保存数据的目录) 数据卷名称:app-data
+docker run -itd -v /var/lib/mysql -v /etc/apache2 -v /etc/mysql --name dv_appdata alpine:3.8 /bin/sh
+
+
+//其它容器使用数据卷容器
+docker run -itd --name web1 --volumes-from dv_appdata ubuntu
+
+//通过临时容器备份数据容器卷 
+//数据容器名称：dvdata    /etc目录为数据卷容器内的保存数据的目录
+//docker宿主机备份目录/container_backup
+//临时容器目录/backup    ubuntu 临时容器镜像名
+docker run --rm --volumes-from dvdata -v /app:/backup ubuntu tar cvf /backup/aaa.tar /etc
+docker run --rm --volumes-from dvdata -v /container_backup:/backup ubuntu tar cvf /backup/backup.tar /data
+
+//恢复数据卷容器 创建数据卷容器
+docker run -v /data --name dvdata2 ubuntu
+//将数据恢复到临时容器，同时恢复到数据卷容器
+docker run --volumes-from dvdata2 -v /container_backup:/backup ubuntu tar xvf /backup/backup.tar
+
+
+
+**************************************************************  APACHE  ****************************************************************
+//启动apache2容器-linux
+docker run \
+ --name jhz_apache \
+ --restart=always \
+ -p 8081:80 \
+ -d \
+ -v /var/app/apache2_data:/usr/local/apache2/htdocs \
+ 
+ -v dv-jhz-apache-logs:/usr/local/apache2/logs \
+ 
+ 
+ -v /app/data:/usr/local/apache2/conf \
+ 
+ httpd:2.4.34-alpine \
+ httpd -DFOREGROUND
+ 
+ 
+ 
+ docker run \
+ --name jhz_apache1 \
+ --restart=always \
+ -p 8082:80 \
+ -d \
+ -v /app/aaa:/usr/local/apache2/htdocs \
+ -v /app/bbb:/usr/local/apache2/logs \
+ -v /app/ccc:/usr/local/apache2/conf \
+ httpd:2.4.34-alpine \
+ httpd -DFOREGROUND
+ 
+  --network amnp-net \
+ --ip 172.0.0.2 \
+
+//以下方法进入虚拟机控制台
+docker exec -it jhz_apache /bin/bash 
+
+**************************************************************  NGINX  ****************************************************************
+//启动nginx容器,需要事先在/home/nginx/conf/目录中建立nginx.conf文件，否则配置文件挂载不上
+docker run \
+ --name jhz_nginx \
+ --restart=always \
+ -p 8082:80 \
+ -d \
+ -v dv-jhz-nginx-html:/usr/share/nginx/html \
+ -v dv-jhz-nginx-logs:/wwwlogs \
+ -v dv-jhz-nginx-conf:/etc/nginx/conf.d \
+ nginx:1.15.3-alpine \
+ nginx -g 'daemon off;'
+
+ --network amnp-net \
+ --ip 172.0.0.3 \
+ 
+//以下方法进入虚拟机控制台
+docker exec -it jhz_nginx /bin/bash 
+
+
+**************************************************************  mysql ****************************************************************
+//启动mysql容器-linux
+docker run \
+ --name mmm1 \
+ --restart=always \
+ -p 3301:3306 \
+ -d \
+ -v dv-mmm1-data:/var/lib/mysql \
+ -v dv-mmm1-conf:/etc/mysql \
+ -e MYSQL_ROOT_PASSWORD=123456 \
+ mysql:5.6
+
+ 
+ --network amnp-net \
+ --ip 172.0.0.4 \
+ -v dv-jhz-mysql-logs:/var/log/mysql \
+ 
+//以下方法进入虚拟机控制台
+docker exec -it mmm /bin/bash 
+
+
+**************************************************************  ubuntu16  ****************************************************************
+//启动ubuntu整合容器apache2.4 php7.1 mysql 5.7 ssh
+docker run \
+ --name juamp \
+ -p 8084:80 \
+ -p 3307:3306 \
+ -p 5023:22 \
+ -d \
+ -v dv-jump-apache-www:/var/www/html \
+ -v dv-jump-apache-conf:/etc/apache2 \
+ -v dv-jump-mysql-data:/var/lib/mysql \
+ -v dv-jump-mysql-conf:/etc/mysql \
+ juamp:1.2 /bin/bash
+
+ /etc/start-service.sh
+ 
+sudo docker exec -it juamp /etc/init.d/mysql restart 
+sudo docker exec -it juamp /etc/init.d/apache2 restart
+sudo docker exec -it juamp /etc/init.d/ssh restart
+sudo docker exec -it juamp /bin/bash
+ 
+
+**************************************************************  ubuntu16 php集成部署环境 ****************************************************************
+
+docker run \
+ --name fusion_plantform \
+ -p 8081:80 \
+ -p 3307:3306 \
+ -p 5023:22 \
+ -itd  \
+ ubuntu:16.04 /bin/bash
+ 
+//进入容器内部开始安装环境
+docker exec -it fusion_plantform  /bin/bash 
+
+
+
+apt update
+apt upgrade
+apt clean
+apt autoclean
+apt autoremove
+
+//设置字符集  可选
+apt install language-pack-en-base
+locale-gen en_US.UTF-8
+apt install software-properties-common
+LC_ALL=en_US.UTF-8 add-apt-repository ppa:ondrej/php
+
+
+//安装文本编辑器
+apt install vim
+
+//安装apache2
+apt install apache2
+//配置apache2 
+vim /etc/apache2/apache2.conf //编辑配置文件,在空白处添加下面的配置
+ServerName localhost
+//启动apache2
+service apache2  restart
+//测试apache2 访问apache 显示 Apache2 Ubuntu Default Page
+http://192.168.7.227:8081/
+//查看aapche版本
+Apache2 -v
+
+//安装mysql5.7
+apt install mysql-server mysql-client libmysqlclient-dev
+//启动mysql报错：No directory, logging in with HOME=/ 解决办法
+usermod -d /var/lib/mysql/ mysql   #第一步
+ln -s /var/lib/mysql/mysql.sock /tmp/mysql.sock   #第二步
+chown -R mysql:mysql /var/lib/mysql   #第三步
+//后期挂载数据目录到卷的时候默认docker是由root用户操作，因此mysql用户需要加入root组才能正常访问这个目录
+usermod -a -G root mysql
+//登录mysql 修改远程登录
+$ mysql -uroot -p
+mysql> grant all on *.* to root@'%' identified by '123456' with grant option;
+mysql> flush privileges;
+mysql> exit
+# 修改配置文件，注释掉bind-address = 127.0.0.1
+vim /etc/mysql/mysql.conf.d/mysqld.cnf
+//重启数据库
+/etc/init.d/mysql restart
+//生产环境设置数据库安全(可选)
+mysql_secure_installation
+
+//安装php7
+apt install php
+//安装apache的php模块
+apt install libapache2-mod-php
+//建立php文件 phpinfo.php
+<?php
+ phpinfo(); 
+?>
+//测试aapche和php整合结果,访问以下地址,显示php配置信息页面
+http://192.168.7.227:8081/phpinfo.php
+//安装php扩展
+apt install php7.0-fpm php7.0-mysql php7.0-common php7.0-curl php7.0-cli php7.0-mcrypt php7.0-mbstring php7.0-dom
+apt install php-zip php7.0-xml php7.0-json php7.0-gd
+//查看已经安装的php模块
+php -m
+
+//重启容器,确认各种服务正常访问
+docker restart  fusion_plantform
+docker exec -it fusion_plantform service apache2 restart //在容器外启动apache服务
+docker exec -it fusion_plantform service mysql restart    //在容器外启动mysql服务
+//将容器提交为镜像
+docker commit fusion_plantform fff:1.0
+
+//从镜像启动新容器
+docker run \
+ --name fff2 \
+ -p 8082:80 \
+ -p 3308:3306 \
+ -p 5024:22 \
+ -itd  \
+ -v fp-apache-www:/var/www/html \
+ -v fp-apache-conf:/etc/apache2 \
+ -v fp-mysql-data:/var/lib/mysql \
+ fff:1.0 /bin/bash
+//启动服务 //在容器外启动apache服务  //在容器外启动mysql服务
+docker exec -it fff2 service apache2 restart 
+docker exec -it fff2 service mysql restart   
+
+//安装composer工具
+apt install composer
+//下载laravel依赖
+composer global require "laravel/installer"
+# 修改环境变量,将laravel命令加到PATH末尾
+export PATH=$PATH:~/.composer/vendor/bin
+//创建测试项目 laravel5.5
+composer create-project --prefer-dist laravel/laravel blog 5.5
+
+
+
+
+
+**************************************************************  gitlab  ****************************************************************
+#1.创建容器
+docker run --detach \
+    --hostname gitlab.example.com \
+    --publish 444:443 --publish 8083:80 --publish 23:22 \
+    --name gitlab \
+    --restart always \
+    --volume /srv/gitlab/config:/etc/gitlab \
+    --volume /srv/gitlab/logs:/var/log/gitlab \
+    --volume /srv/gitlab/data:/var/opt/gitlab \
+    gitlab/gitlab-ce:11.6.0-ce.0 
+
+
+sudo docker run --detach \
+  --hostname gitlab.example.com \
+  --env GITLAB_OMNIBUS_CONFIG="external_url 'http://192.168.48.131:8083/'; gitlab_rails['lfs_enabled'] = true;" \
+  --publish 443:443 --publish 8083:80 --publish 23:22 \
+  --name gitlab \
+  --restart always \
+  --volume /srv/gitlab/config:/etc/gitlab \
+  --volume /srv/gitlab/logs:/var/log/gitlab \
+  --volume /srv/gitlab/data:/var/opt/gitlab \
+  gitlab/gitlab-ce:11.6.0-ce.0 
+  
+**************************************************************  portainer  ****************************************************************
+#docker容器管理UI工具
+docker run -d -p 9000:9000 \
+    --restart=always \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    --name prtainer-test \
+    portainer/portainer
+    
+
+
+**************************************************************  redmine  ****************************************************************
+
+docker run -d --name some-mysql  -p 3308:3306 -e MYSQL_ROOT_PASSWORD=123456 -e MYSQL_DATABASE=redmine mysql:5.6
+docker run -d --name some-redmine -p 3000:3000 --link some-mysql:mysql redmine
+
+**************************************************************  bitnami/redmine ****************************************************************
+
+curl -sSL https://raw.githubusercontent.com/bitnami/bitnami-docker-redmine/master/docker-compose.yml > docker-compose.yml
+docker-compose up -d
+
+
+**************************************************************  cyberzone-e ****************************************************************
+docker run --name cze-f-video --restart=always --privileged=true -p 80:80 -p 3306:3306 -p 5552:5552 -p 443:443 -itd \
+-v dv-Fusion_Platform-apache-www:/var/www \
+-v dv-Fusion_Platform-mysql-data:/var/lib/mysql \
+-v dv-Fusion_Platform-home:/home \
+-v /etc/timezone:/etc/timezone \
+-v /etc/localtime:/etc/localtime \
+192.168.6.3:5000/cze_jre_cifs_auto_proxy \
+/app/auto_service.sh
+
+
+docker cp auto_service.sh Fusion_Platform:/app/auto_service.sh
+
+git clone http://192.168.8.2/root/Fusion_Platform /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform
+
+chmod -R 777 /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/storage
+chmod -R 777 /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/bootstrap/cache
+
+ln -s /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/storage/ /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/public/
+
+
+scp root@192.168.8.2:/mnt/XXXXXX/storage /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/
+
+
+
+
+
+**************************************************************  cyberzone-nvmp ****************************************************************
+
+-v /app/apache2:/etc/apache2 \
+
+docker run -d -p 8081:80 --name cyberzone-nvmp --privileged=true \
+-v /app/src:/var/www \
+-v /app/log:/var/log/apache2 \
+192.168.6.3:5000/cyberzone-nvmp
+
+
+**************************************************************  redis ****************************************************************
+docker run -p 6380:6379 --name nvmp-redis -d redis
+
+**************************************************************  filebrowser ****************************************************************
+
+docker run -d --name filebrowser --privileged=true \
+    -v /app/srv:/srv \
+    -v /app/database.db:/etc/database.db \
+    -v /app/config.json:/etc/config.json \
+    -p 8085:80 \
+    filebrowser/filebrowser
+    
+初始用户名密码
+
+
+
+
+

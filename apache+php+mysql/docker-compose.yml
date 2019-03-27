@@ -1,0 +1,77 @@
+version: "3"
+services:
+
+  php-apache:
+    image: php:7.1.21-apache
+    container_name: "jhz-apache-php"
+    ports:
+      - "8089:80"
+    restart: always
+    volumes:
+      - dv-jhz-php-apache-html:/var/www/html
+      - dv-jhz-php-apache-phpconf:/usr/local/etc/php
+      - dv-jhz-php-apache-apacheconf:/etc/apache2
+    networks:
+      amp-net:
+        ipv4_address: 172.0.0.5
+    
+  mysql:
+    image: mysql:5.6
+    container_name: "jhz-mysql"
+    ports:
+      - "3307:3306"
+    restart: always
+    volumes:
+     - dv-jhz-mysql-data:/var/lib/mysql
+     - dv-jhz-mysql-conf:/etc/mysql/mysql.conf.d
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      amp-net:
+        ipv4_address: 172.0.0.3
+
+
+  # apache2:
+    # image: httpd:2.4.34-alpine
+    # container_name: "jhz-apache"
+    # depends_on:
+      # - "php"
+    # ports:
+      # - "8087:80"
+    # restart: always
+    # volumes:
+      # - dv-jhz-apache-html:/usr/local/apache2/htdocs
+      # - dv-jhz-apache-conf:/usr/local/apache2/conf
+    # networks:
+      # amp-net:
+        # ipv4_address: 172.0.0.2
+    # command: httpd -DFOREGROUND
+    
+  # php:
+    # image: php:7.1.21-fpm-alpine
+    # container_name: "jhz-php"
+    # ports:
+      # - "9000:9000"
+    # command: php-fpm
+    # networks:
+      # amp-net:
+        # ipv4_address: 172.0.0.4
+ 
+volumes:
+  # dv-jhz-apache-html:
+  # dv-jhz-apache-conf:
+  dv-jhz-mysql-data:
+  dv-jhz-mysql-conf:
+  dv-jhz-php-apache-html:
+  dv-jhz-php-apache-phpconf:
+  dv-jhz-php-apache-apacheconf:
+  
+networks:
+  amp-net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.0.0.0/16
+          
