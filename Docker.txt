@@ -490,33 +490,6 @@ export PATH=$PATH:~/.composer/vendor/bin
 composer create-project --prefer-dist laravel/laravel blog 5.5
 
 
-
-
-
-**************************************************************  gitlab  ****************************************************************
-#1.创建容器
-docker run --detach \
-    --hostname gitlab.example.com \
-    --publish 444:443 --publish 8083:80 --publish 23:22 \
-    --name gitlab \
-    --restart always \
-    --volume /srv/gitlab/config:/etc/gitlab \
-    --volume /srv/gitlab/logs:/var/log/gitlab \
-    --volume /srv/gitlab/data:/var/opt/gitlab \
-    gitlab/gitlab-ce:11.6.0-ce.0 
-
-
-sudo docker run --detach \
-  --hostname gitlab.example.com \
-  --env GITLAB_OMNIBUS_CONFIG="external_url 'http://192.168.48.131:8083/'; gitlab_rails['lfs_enabled'] = true;" \
-  --publish 443:443 --publish 8083:80 --publish 23:22 \
-  --name gitlab \
-  --restart always \
-  --volume /srv/gitlab/config:/etc/gitlab \
-  --volume /srv/gitlab/logs:/var/log/gitlab \
-  --volume /srv/gitlab/data:/var/opt/gitlab \
-  gitlab/gitlab-ce:11.6.0-ce.0 
-  
 **************************************************************  portainer  ****************************************************************
 #docker容器管理UI工具
 docker run -d -p 9000:9000 \
@@ -525,18 +498,6 @@ docker run -d -p 9000:9000 \
     --name prtainer-test \
     portainer/portainer
     
-
-
-**************************************************************  redmine  ****************************************************************
-
-docker run -d --name some-mysql  -p 3308:3306 -e MYSQL_ROOT_PASSWORD=123456 -e MYSQL_DATABASE=redmine mysql:5.6
-docker run -d --name some-redmine -p 3000:3000 --link some-mysql:mysql redmine
-
-**************************************************************  bitnami/redmine ****************************************************************
-
-curl -sSL https://raw.githubusercontent.com/bitnami/bitnami-docker-redmine/master/docker-compose.yml > docker-compose.yml
-docker-compose up -d
-
 
 **************************************************************  cyberzone-e ****************************************************************
 docker run --name cze-f-video --restart=always --privileged=true -p 80:80 -p 3306:3306 -p 5552:5552 -p 443:443 -itd \
@@ -563,12 +524,7 @@ scp root@192.168.8.2:/mnt/XXXXXX/storage /var/lib/docker/volumes/dv-Fusion_Platf
 
 
 
-
-
 **************************************************************  cyberzone-nvmp ****************************************************************
-
--v /app/apache2:/etc/apache2 \
-
 docker run -d -p 8081:80 --name cyberzone-nvmp --privileged=true \
 -v /app/src:/var/www \
 -v /app/log:/var/log/apache2 \
@@ -587,7 +543,7 @@ docker run -d --name filebrowser --privileged=true \
     -p 8085:80 \
     filebrowser/filebrowser
     
-初始用户名密码
+初始用户名密码 admin admin
 
 
 
