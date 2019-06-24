@@ -13,6 +13,14 @@
 12.性能监控，从界面上看，虚拟机开启
 
 
+scp -r course_dev root@192.168.6.41:/mnt
+bg %1
+jobs
+disown -h %1
+
+
+
+
 //修改ubuntu分辨率
 VMware中的Ubuntu Server的控制台窗口有点儿小，使用起来不太方便，要调整控制台的窗口大小，需要修改屏幕的分辨率，修改方法如下：（参见Reference）
  1. 打开grub文件($sudo vim /etc/default/grub), 修改参数
@@ -87,8 +95,7 @@ sudo vim /etc/hosts
 
 //Ubuntu18.04安装mysql5.7
 sudo apt install mysql-server mysql-client libmysqlclient-dev
-# 检查状态
-sudo netstat -tap | grep mysql
+
 #设置root密码
 //mysql5.7安装完成后普通用户不能进mysql，原因：root的plugin被修改成了auth_socket，用密码登陆的plugin应该是mysql_native_password，直接用root权限登录就不用密码,修改root密码和登录验证方式：
 $ sudo su
@@ -331,9 +338,6 @@ docker run \
 
  --network amnp-net \
  --ip 172.0.0.3 \
- 
-//以下方法进入虚拟机控制台
-docker exec -it jhz_nginx /bin/bash 
 
 
 **************************************************************  mysql ****************************************************************
@@ -353,145 +357,20 @@ docker run \
  --ip 172.0.0.4 \
  -v dv-jhz-mysql-logs:/var/log/mysql \
  
-//以下方法进入虚拟机控制台
-docker exec -it mmm /bin/bash 
 
-
-**************************************************************  ubuntu16  ****************************************************************
-//启动ubuntu整合容器apache2.4 php7.1 mysql 5.7 ssh
+**************************************************************  cyberzone-i ****************************************************************
 docker run \
- --name juamp \
- -p 8084:80 \
- -p 3307:3306 \
- -p 5023:22 \
- -d \
- -v dv-jump-apache-www:/var/www/html \
- -v dv-jump-apache-conf:/etc/apache2 \
- -v dv-jump-mysql-data:/var/lib/mysql \
- -v dv-jump-mysql-conf:/etc/mysql \
- juamp:1.2 /bin/bash
-
- /etc/start-service.sh
- 
-sudo docker exec -it juamp /etc/init.d/mysql restart 
-sudo docker exec -it juamp /etc/init.d/apache2 restart
-sudo docker exec -it juamp /etc/init.d/ssh restart
-sudo docker exec -it juamp /bin/bash
- 
-
-**************************************************************  ubuntu16 php集成部署环境 ****************************************************************
-
-docker run \
- --name fusion_plantform \
- -p 8081:80 \
- -p 3307:3306 \
- -p 5023:22 \
+ --name czi \
+ -p 80:80 \
+ -p 88:88 \
+ -p 3306:3306 \
+ -v dv-czi-auto-service:/app \
+ -v dv-czi-www:/var/www \
+ -v dv-czi-mysqldata:/var/lib/mysql \
  -itd  \
- ubuntu:16.04 /bin/bash
- 
-//进入容器内部开始安装环境
-docker exec -it fusion_plantform  /bin/bash 
+ 192.168.6.3:5000/cyberzone-i:1.0 /app/auto_service.sh
 
-
-
-apt update
-apt upgrade
-apt clean
-apt autoclean
-apt autoremove
-
-//设置字符集  可选
-apt install language-pack-en-base
-locale-gen en_US.UTF-8
-apt install software-properties-common
-LC_ALL=en_US.UTF-8 add-apt-repository ppa:ondrej/php
-
-
-//安装文本编辑器
-apt install vim
-
-//安装apache2
-apt install apache2
-//配置apache2 
-vim /etc/apache2/apache2.conf //编辑配置文件,在空白处添加下面的配置
-ServerName localhost
-//启动apache2
-service apache2  restart
-//测试apache2 访问apache 显示 Apache2 Ubuntu Default Page
-http://192.168.7.227:8081/
-//查看aapche版本
-Apache2 -v
-
-//安装mysql5.7
-apt install mysql-server mysql-client libmysqlclient-dev
-//启动mysql报错：No directory, logging in with HOME=/ 解决办法
-usermod -d /var/lib/mysql/ mysql   #第一步
-ln -s /var/lib/mysql/mysql.sock /tmp/mysql.sock   #第二步
-chown -R mysql:mysql /var/lib/mysql   #第三步
-//后期挂载数据目录到卷的时候默认docker是由root用户操作，因此mysql用户需要加入root组才能正常访问这个目录
-usermod -a -G root mysql
-//登录mysql 修改远程登录
-$ mysql -uroot -p
-mysql> grant all on *.* to root@'%' identified by '123456' with grant option;
-mysql> flush privileges;
-mysql> exit
-# 修改配置文件，注释掉bind-address = 127.0.0.1
-vim /etc/mysql/mysql.conf.d/mysqld.cnf
-//重启数据库
-/etc/init.d/mysql restart
-//生产环境设置数据库安全(可选)
-mysql_secure_installation
-
-//安装php7
-apt install php
-//安装apache的php模块
-apt install libapache2-mod-php
-//建立php文件 phpinfo.php
-<?php
- phpinfo(); 
-?>
-//测试aapche和php整合结果,访问以下地址,显示php配置信息页面
-http://192.168.7.227:8081/phpinfo.php
-//安装php扩展
-apt install php7.0-fpm php7.0-mysql php7.0-common php7.0-curl php7.0-cli php7.0-mcrypt php7.0-mbstring php7.0-dom
-apt install php-zip php7.0-xml php7.0-json php7.0-gd
-//查看已经安装的php模块
-php -m
-
-//重启容器,确认各种服务正常访问
-docker restart  fusion_plantform
-docker exec -it fusion_plantform service apache2 restart //在容器外启动apache服务
-docker exec -it fusion_plantform service mysql restart    //在容器外启动mysql服务
-//将容器提交为镜像
-docker commit fusion_plantform fff:1.0
-
-//从镜像启动新容器
-docker run \
- --name fff2 \
- -p 8082:80 \
- -p 3308:3306 \
- -p 5024:22 \
- -itd  \
- -v fp-apache-www:/var/www/html \
- -v fp-apache-conf:/etc/apache2 \
- -v fp-mysql-data:/var/lib/mysql \
- fff:1.0 /bin/bash
-//启动服务 //在容器外启动apache服务  //在容器外启动mysql服务
-docker exec -it fff2 service apache2 restart 
-docker exec -it fff2 service mysql restart   
-
-//安装composer工具
-apt install composer
-//下载laravel依赖
-composer global require "laravel/installer"
-# 修改环境变量,将laravel命令加到PATH末尾
-export PATH=$PATH:~/.composer/vendor/bin
-//创建测试项目 laravel5.5
-composer create-project --prefer-dist laravel/laravel blog 5.5
-
-
-**************************************************************  portainer  ****************************************************************
-#docker容器管理UI工具
+**********************************************************  portainer  #docker容器管理UI工具 *****************************************************
 docker run -d -p 9000:9000 \
     --restart=always \
     -v /var/run/docker.sock:/var/run/docker.sock \
@@ -499,51 +378,80 @@ docker run -d -p 9000:9000 \
     portainer/portainer
     
 
-**************************************************************  cyberzone-e ****************************************************************
-docker run --name cze-f-video --restart=always --privileged=true -p 80:80 -p 3306:3306 -p 5552:5552 -p 443:443 -itd \
--v dv-Fusion_Platform-apache-www:/var/www \
--v dv-Fusion_Platform-mysql-data:/var/lib/mysql \
--v dv-Fusion_Platform-home:/home \
--v /etc/timezone:/etc/timezone \
--v /etc/localtime:/etc/localtime \
-192.168.6.3:5000/cze_jre_cifs_auto_proxy \
-/app/auto_service.sh
-
-
-docker cp auto_service.sh Fusion_Platform:/app/auto_service.sh
-
-git clone http://192.168.8.2/root/Fusion_Platform /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform
-
-chmod -R 777 /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/storage
-chmod -R 777 /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/bootstrap/cache
-
-ln -s /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/storage/ /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/public/
-
-
-scp root@192.168.8.2:/mnt/XXXXXX/storage /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/
-
-
-
 **************************************************************  cyberzone-nvmp ****************************************************************
-docker run -d -p 8081:80 --name cyberzone-nvmp --privileged=true \
--v /app/src:/var/www \
--v /app/log:/var/log/apache2 \
-192.168.6.3:5000/cyberzone-nvmp
+  docker run -d -p 8081:80 --name cyberzone-nvmp --privileged=true \
+  -v dv-czn-auto-service:/app \
+  -v /app/src:/var/www \
+  -v /app/log:/var/log/apache2 \
+   192.168.6.3:5000/cyberzone-nvmp:1.0 /app/auto_service.sh
+
+**************************************************************  jira ****************************************************************
+
+1.pull docker 镜像： jira:7.11.1(目前的最新版本) mysql:5.7
+docker pull cptactionhank/atlassian-jira-software
+docker pull mysql:5.7
+
+2.启动mysql docker实例
+docker run --name jira-mysql --restart always -p 3306:3306 -v /opt/mysql_data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 -d mysql:5.7 #记得修改passwd
+
+3.连接mysql
+docker run -it --link jira-mysql:mysql --rm mysql:5.7 sh -c 'exec mysql -h"$MYSQL_PORT_3306_TCP_ADDR" -P"$MYSQL_PORT_3306_TCP_PORT" -uroot -p"$MYSQL_ENV_MYSQL_ROOT_PASSWORD"'
+
+4.创建jira数据库,并添加jira用户 【mysql操作台执行】
+create database jira default character set utf8 collate utf8_bin;
+CREATE USER `jira`@`%` IDENTIFIED BY 'jira';GRANT ALL ON *.* TO `jira`@`%` WITH GRANT OPTION;
+alter user 'jira'@'%' identified with mysql_native_password by 'jira';
+
+5.修改mysql事物隔离级别 【mysql操作台执行】
+set global transaction isolation level read committed;
+set session transaction isolation level read committed;
+
+6.启动jira实例
+docker run --detach --restart always -v /mnt_ssd/jira/confluence:/home --publish 8083:8080 cptactionhank/atlassian-jira-software
+
+7.访问：192.168.x.x:8080 进行jira配置。配置过程略。配置完成如下图：
+
+http://192.168.99.100:8080/secure/WelcomeToJIRA.jspa
 
 
-**************************************************************  redis ****************************************************************
-docker run -p 6380:6379 --name nvmp-redis -d redis
+---------------------------------------- docker swarm ---------------------------------------
+1.所有节点安装docker，并启用dockerAPI
+#修改/lib/systemd/system/docker.service这个文件中的参数
+vim /usr/lib/systemd/system/docker.service
+[Service]
+ExecStart=
+ExecStart=/usr/bin/dockerd -H unix:///var/run/docker.sock -H tcp://0.0.0.0:2375
+#刷新配置
+systemctl daemon-reload
+#重启docker服务
+systemctl restart docker
 
-**************************************************************  filebrowser ****************************************************************
 
-docker run -d --name filebrowser --privileged=true \
-    -v /app/srv:/srv \
-    -v /app/database.db:/etc/database.db \
-    -v /app/config.json:/etc/config.json \
-    -p 8085:80 \
-    filebrowser/filebrowser
-    
-初始用户名密码 admin admin
+2.创建管理节点
+docker swarm init --advertise-addr 192.168.50.59
+返回：
+Swarm initialized: current node (861zwapl4whzalbmw4j2vatlr) is now a manager.
+To add a worker to this swarm, run the following command:
+    docker swarm join --token SWMTKN-1-5usp4j1qhatxmjdkx5c5k3jjh2u6ku9ap8vp26ro47o62r0hdu-ds66dd57klsenzt4pp6uikiim 192.168.50.59:2375
+To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+
+3.查看集群节点列表
+docker node ls
+
+4.在管理节点运行
+docker swarm join-token worker
+To add a worker to this swarm, run the following command:
+    docker swarm join --token SWMTKN-1-5usp4j1qhatxmjdkx5c5k3jjh2u6ku9ap8vp26ro47o62r0hdu-ds66dd57klsenzt4pp6uikiim 192.168.50.59:2377
+#获得添加其他节点的命令
+
+
+3.向集群添加被管理节点
+docker swarm join --token SWMTKN-1-5usp4j1qhatxmjdkx5c5k3jjh2u6ku9ap8vp26ro47o62r0hdu-ds66dd57klsenzt4pp6uikiim 192.168.50.59:2377
+This node joined a swarm as a worker.
+
+
+
+
 
 
 
