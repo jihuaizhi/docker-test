@@ -1,18 +1,3 @@
-页面样式优化
-1.教师端和管理员端的顶端标题行背景色改为和学生端一致
-2.右上角的用户信息显示中文的姓名字段，而不是账号字段
-3.学生端的顶端三字样式的图标取消
-4.欢迎页浏览器标题和小图标要用项目内默认的图标和系统标题
-5.用户列表的在线状态字段显示错误，在线离线 或者改为用户状态 黑名单 正常 永久有效
-6.所有表格序号字段统一宽度 居中对齐
-7.所有模态框顶端要有标题行，右上角要有关闭按钮X
-8.账号管理的字段顺序需要调整
-9.镜像管理，再次点击镜像上传的时候，上一次的输入未清空
-10.大屏投放，已发布的比赛应该可以进入大屏
-11.性能监控，超过90%资源利用率的时候应该显示红色告警
-12.性能监控，从界面上看，虚拟机开启
-
-
 //修改ubuntu分辨率
 VMware中的Ubuntu Server的控制台窗口有点儿小，使用起来不太方便，要调整控制台的窗口大小，需要修改屏幕的分辨率，修改方法如下：（参见Reference）
  1. 打开grub文件($sudo vim /etc/default/grub), 修改参数
@@ -42,17 +27,6 @@ sudo apt install apache2
 //用于加载模块的配置片段： / etc / apache2 / mods-available /和/ etc / apache2 / mods-enabled / 
 //Web DocumentRoot： / var / www / html / 
 //日志文件（错误和访问日志）目录： / var / log / apache / 
-
-
-//操作apache
-sudo systemctl status apache2
-sudo systemctl stop apache2
-sudo systemctl start apache2
-sudo systemctl restart apache2
-sudo systemctl reload apache2
-sudo systemctl enable apache2
-sudo systemctl disable apache2
-/etc/init.d/apache2 start
 
 
 //安装配置ssh服务
@@ -280,42 +254,6 @@ docker run --volumes-from dvdata2 -v /container_backup:/backup ubuntu tar xvf /b
 
 
 
-**************************************************************  APACHE  ****************************************************************
-//启动apache2容器-linux
-docker run \
- --name jhz_apache \
- --restart=always \
- -p 8081:80 \
- -d \
- -v /var/app/apache2_data:/usr/local/apache2/htdocs \
- 
- -v dv-jhz-apache-logs:/usr/local/apache2/logs \
- 
- 
- -v /app/data:/usr/local/apache2/conf \
- 
- httpd:2.4.34-alpine \
- httpd -DFOREGROUND
- 
- 
- 
- docker run \
- --name jhz_apache1 \
- --restart=always \
- -p 8082:80 \
- -d \
- -v /app/aaa:/usr/local/apache2/htdocs \
- -v /app/bbb:/usr/local/apache2/logs \
- -v /app/ccc:/usr/local/apache2/conf \
- httpd:2.4.34-alpine \
- httpd -DFOREGROUND
- 
-  --network amnp-net \
- --ip 172.0.0.2 \
-
-//以下方法进入虚拟机控制台
-docker exec -it jhz_apache /bin/bash 
-
 **************************************************************  NGINX  ****************************************************************
 //启动nginx容器,需要事先在/home/nginx/conf/目录中建立nginx.conf文件，否则配置文件挂载不上
 docker run \
@@ -353,33 +291,12 @@ docker run \
  --ip 172.0.0.4 \
  -v dv-jhz-mysql-logs:/var/log/mysql \
  
-//以下方法进入虚拟机控制台
-docker exec -it mmm /bin/bash 
 
 
-**************************************************************  ubuntu16  ****************************************************************
-//启动ubuntu整合容器apache2.4 php7.1 mysql 5.7 ssh
-docker run \
- --name juamp \
- -p 8084:80 \
- -p 3307:3306 \
- -p 5023:22 \
- -d \
- -v dv-jump-apache-www:/var/www/html \
- -v dv-jump-apache-conf:/etc/apache2 \
- -v dv-jump-mysql-data:/var/lib/mysql \
- -v dv-jump-mysql-conf:/etc/mysql \
- juamp:1.2 /bin/bash
 
- /etc/start-service.sh
- 
-sudo docker exec -it juamp /etc/init.d/mysql restart 
-sudo docker exec -it juamp /etc/init.d/apache2 restart
-sudo docker exec -it juamp /etc/init.d/ssh restart
-sudo docker exec -it juamp /bin/bash
  
 
-**************************************************************  ubuntu16 php集成部署环境 ****************************************************************
+**************************************************************  ubuntu16 php laravel 集成部署环境 ****************************************************************
 
 docker run \
  --name fusion_plantform \
@@ -499,51 +416,31 @@ docker run -d -p 9000:9000 \
     portainer/portainer
     
 
-**************************************************************  cyberzone-e ****************************************************************
-docker run --name cze-f-video --restart=always --privileged=true -p 80:80 -p 3306:3306 -p 5552:5552 -p 443:443 -itd \
--v dv-Fusion_Platform-apache-www:/var/www \
--v dv-Fusion_Platform-mysql-data:/var/lib/mysql \
--v dv-Fusion_Platform-home:/home \
--v /etc/timezone:/etc/timezone \
--v /etc/localtime:/etc/localtime \
-192.168.6.3:5000/cze_jre_cifs_auto_proxy \
-/app/auto_service.sh
 
 
-docker cp auto_service.sh Fusion_Platform:/app/auto_service.sh
+**************************************************************  k8s ****************************************************************
 
-git clone http://192.168.8.2/root/Fusion_Platform /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform
+docker run --net=host -d gcr.io/google_containers/etcd:2.0.12 /usr/local/bin/etcd --addr=127.0.0.1:4001 --bind-addr=0.0.0.0:4001 --data-dir=/var/etcd/data
+上面的镜像需要翻墙，可用下面的镜像代替
+docker run --net=host -d hujian/etcd:2.0.12 /usr/local/bin/etcd --addr=127.0.0.1:4001 --bind-addr=0.0.0.0:4001 --data-dir=/var/etcd/data
 
-chmod -R 777 /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/storage
-chmod -R 777 /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/bootstrap/cache
-
-ln -s /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/storage/ /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/public/
-
-
-scp root@192.168.8.2:/mnt/XXXXXX/storage /var/lib/docker/volumes/dv-Fusion_Platform-apache-www/_data/Fusion_Platform/
-
-
-
-**************************************************************  cyberzone-nvmp ****************************************************************
-docker run -d -p 8081:80 --name cyberzone-nvmp --privileged=true \
--v /app/src:/var/www \
--v /app/log:/var/log/apache2 \
-192.168.6.3:5000/cyberzone-nvmp
+docker run \
+    --volume=/:/rootfs:ro \
+    --volume=/sys:/sys:ro \
+    --volume=/dev:/dev \
+    --volume=/var/lib/docker/:/var/lib/docker:ro \
+    --volume=/var/lib/kubelet/:/var/lib/kubelet:rw \
+    --volume=/var/run:/var/run:rw \
+    --net=host \
+    --pid=host \
+    --privileged=true \
+    -d \
+    hujian/hyperkube:v1.0.1 \
+    /hyperkube kubelet --containerized --hostname-override=&quot;127.0.0.1&quot; --address=&quot;0.0.0.0&quot; --api-servers=http://localhost:8080 --config=/etc/kubernetes/manifests
 
 
-**************************************************************  redis ****************************************************************
-docker run -p 6380:6379 --name nvmp-redis -d redis
 
-**************************************************************  filebrowser ****************************************************************
-
-docker run -d --name filebrowser --privileged=true \
-    -v /app/srv:/srv \
-    -v /app/database.db:/etc/database.db \
-    -v /app/config.json:/etc/config.json \
-    -p 8085:80 \
-    filebrowser/filebrowser
-    
-初始用户名密码 admin admin
+kubectl apply --namespace weave -f "https://cloud.weave.works/k8s/scope.yaml?k8s-version=$(kubectl version | base64 | tr -d '\n')"
 
 
 
