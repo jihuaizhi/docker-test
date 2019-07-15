@@ -2,11 +2,11 @@
 VMware中的Ubuntu Server的控制台窗口有点儿小，使用起来不太方便，要调整控制台的窗口大小，需要修改屏幕的分辨率，修改方法如下：（参见Reference）
  1. 打开grub文件($sudo vim /etc/default/grub), 修改参数
 GRUB_CMDLINE_LINUX="vga=0x317", 参数值参考下图：
-Colours	640x480  800x600  1024x768  1152x864  1280x1024  1600x1200
-256 色	0x301	 0x303    0x305	    0x161	  0x307      0x31C
-32k 色	0x310	 0x313	  0x316	    0x162	  0x319	     0x31D
-64k 色	0x311	 0x314	  0x317	    0x163	  0x31A	     0x31E
-16m 色	0x312	 0x315	  0x318	    ?	      0x31B	     0x31F
+Colours    640x480  800x600  1024x768  1152x864  1280x1024  1600x1200
+256 色    0x301     0x303    0x305        0x161      0x307      0x31C
+32k 色    0x310     0x313      0x316        0x162      0x319         0x31D
+64k 色    0x311     0x314      0x317        0x163      0x31A         0x31E
+16m 色    0x312     0x315      0x318        ?          0x31B         0x31F
 
 $sudo update-grub
 $sudo reboot
@@ -219,7 +219,7 @@ docker-compose --version
 docker-compose version 1.22.0, build f46880fe
   
 
-//更新运行中的Docker容器重启策略	
+//更新运行中的Docker容器重启策略    
 docker update --restart=always <CONTAINER ID>
 
 //查看容器信息
@@ -254,7 +254,7 @@ docker run --volumes-from dvdata2 -v /container_backup:/backup ubuntu tar xvf /b
 
 
 
-**************************************************************  NGINX  ****************************************************************
+*********************************************************  NGINX  *************************************************************
 //启动nginx容器,需要事先在/home/nginx/conf/目录中建立nginx.conf文件，否则配置文件挂载不上
 docker run \
  --name jhz_nginx \
@@ -274,7 +274,7 @@ docker run \
 docker exec -it jhz_nginx /bin/bash 
 
 
-**************************************************************  mysql ****************************************************************
+**********************************************************  mysql ************************************************************
 //启动mysql容器-linux
 docker run \
  --name mmm1 \
@@ -292,11 +292,7 @@ docker run \
  -v dv-jhz-mysql-logs:/var/log/mysql \
  
 
-
-
- 
-
-**************************************************************  ubuntu16 php laravel 集成部署环境 ****************************************************************
+***************************************************  ubuntu16 php laravel 集成部署环境 ****************************************************
 
 docker run \
  --name fusion_plantform \
@@ -308,8 +304,6 @@ docker run \
  
 //进入容器内部开始安装环境
 docker exec -it fusion_plantform  /bin/bash 
-
-
 
 apt update
 apt upgrade
@@ -416,106 +410,18 @@ docker run -d -p 9000:9000 \
     portainer/portainer
     
 
+*********************************************************  docker 私有仓库 registry ********************************************************
+
+docker run -d -p 5000:5000 --restart always --name registry registry:2
 
 
-**************************************************************  k8s ****************************************************************
-
-docker run --net=host -d gcr.io/google_containers/etcd:2.0.12 /usr/local/bin/etcd --addr=127.0.0.1:4001 --bind-addr=0.0.0.0:4001 --data-dir=/var/etcd/data
-上面的镜像需要翻墙，可用下面的镜像代替
-docker run --net=host -d hujian/etcd:2.0.12 /usr/local/bin/etcd --addr=127.0.0.1:4001 --bind-addr=0.0.0.0:4001 --data-dir=/var/etcd/data
-
-docker run \
-    --volume=/:/rootfs:ro \
-    --volume=/sys:/sys:ro \
-    --volume=/dev:/dev \
-    --volume=/var/lib/docker/:/var/lib/docker:ro \
-    --volume=/var/lib/kubelet/:/var/lib/kubelet:rw \
-    --volume=/var/run:/var/run:rw \
-    --net=host \
-    --pid=host \
-    --privileged=true \
-    -d \
-    hujian/hyperkube:v1.0.1 \
-    /hyperkube kubelet --containerized --hostname-override=&quot;127.0.0.1&quot; --address=&quot;0.0.0.0&quot; --api-servers=http://localhost:8080 --config=/etc/kubernetes/manifests
-
-
-
-kubectl apply --namespace weave -f "https://cloud.weave.works/k8s/scope.yaml?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+docker run -p 8090:8080 -e REG1=http://192.168.50.59:5000/v1/ atcol/docker-registry-ui
 
 
 
 
 
 
-
-
-
-
-
-
-**************************************************************  jira ****************************************************************
-
-1.pull docker 镜像： jira:7.11.1(目前的最新版本) mysql:5.7
-docker pull cptactionhank/atlassian-jira-software
-docker pull mysql:5.7
-
-2.启动mysql docker实例
-docker run --name jira-mysql --restart always -p 3306:3306 -v /opt/mysql_data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 -d mysql:5.7 #记得修改passwd
-
-3.连接mysql
-docker run -it --link jira-mysql:mysql --rm mysql:5.7 sh -c 'exec mysql -h"$MYSQL_PORT_3306_TCP_ADDR" -P"$MYSQL_PORT_3306_TCP_PORT" -uroot -p"$MYSQL_ENV_MYSQL_ROOT_PASSWORD"'
-
-4.创建jira数据库,并添加jira用户 【mysql操作台执行】
-create database jira default character set utf8 collate utf8_bin;
-CREATE USER `jira`@`%` IDENTIFIED BY 'jira';GRANT ALL ON *.* TO `jira`@`%` WITH GRANT OPTION;
-alter user 'jira'@'%' identified with mysql_native_password by 'jira';
-
-5.修改mysql事物隔离级别 【mysql操作台执行】
-set global transaction isolation level read committed;
-set session transaction isolation level read committed;
-
-6.启动jira实例
-docker run --detach --restart always -v /mnt_ssd/jira/confluence:/home --publish 8083:8080 cptactionhank/atlassian-jira-software
-
-7.访问：192.168.x.x:8080 进行jira配置。配置过程略。配置完成如下图：
-
-http://192.168.99.100:8080/secure/WelcomeToJIRA.jspa
-
-
----------------------------------------- docker swarm ---------------------------------------
-1.所有节点安装docker，并启用dockerAPI
-#修改/lib/systemd/system/docker.service这个文件中的参数
-vim /usr/lib/systemd/system/docker.service
-[Service]
-ExecStart=
-ExecStart=/usr/bin/dockerd -H unix:///var/run/docker.sock -H tcp://0.0.0.0:2375
-#刷新配置
-systemctl daemon-reload
-#重启docker服务
-systemctl restart docker
-
-
-2.创建管理节点
-docker swarm init --advertise-addr 192.168.50.59
-返回：
-Swarm initialized: current node (861zwapl4whzalbmw4j2vatlr) is now a manager.
-To add a worker to this swarm, run the following command:
-    docker swarm join --token SWMTKN-1-5usp4j1qhatxmjdkx5c5k3jjh2u6ku9ap8vp26ro47o62r0hdu-ds66dd57klsenzt4pp6uikiim 192.168.50.59:2375
-To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
-
-3.查看集群节点列表
-docker node ls
-
-4.在管理节点运行
-docker swarm join-token worker
-To add a worker to this swarm, run the following command:
-    docker swarm join --token SWMTKN-1-5usp4j1qhatxmjdkx5c5k3jjh2u6ku9ap8vp26ro47o62r0hdu-ds66dd57klsenzt4pp6uikiim 192.168.50.59:2377
-#获得添加其他节点的命令
-
-
-3.向集群添加被管理节点
-docker swarm join --token SWMTKN-1-5usp4j1qhatxmjdkx5c5k3jjh2u6ku9ap8vp26ro47o62r0hdu-ds66dd57klsenzt4pp6uikiim 192.168.50.59:2377
-This node joined a swarm as a worker.
 
 
 
@@ -600,70 +506,134 @@ spec:         #必选，Pod中容器的详细定义
           path: string
 
 
----------------------------------------- yaml 创建nginx服务 v1.13.4 --------------------------------------------
-{
-  "kind": "Service",
-  "apiVersion": "v1",
-  "metadata": {
-    "name": "nginx-test",
-    "namespace": "default",
-    "selfLink": "/api/v1/namespaces/default/services/nginx-test",
-    "uid": "41aefd5e-993f-11e9-867c-000c293a12a7",
-    "resourceVersion": "4849988",
-    "creationTimestamp": "2019-06-28T00:54:17Z",
-    "labels": {
-      "k8s-app": "nginx-test"
-    },
-    "annotations": {
-      "description": "miaoshu"
-    }
-  },
-  "spec": {
-    "ports": [
-      {
-        "name": "tcp-80-80-wmh99",
-        "protocol": "TCP",
-        "port": 80,
-        "targetPort": 80,
-        "nodePort": 30114
-      }
-    ],
-    "selector": {
-      "k8s-app": "nginx-test"
-    },
-    "clusterIP": "10.100.50.143",
-    "type": "LoadBalancer",
-    "sessionAffinity": "None",
-    "externalTrafficPolicy": "Cluster"
-  },
-  "status": {
-    "loadBalancer": {}
-  }
-}
-
-
-------------------------------- yaml 创建部署 -------------------------------
-
-
-https://192.168.6.154:6443/apis/apps/v1beta1/namespaces/default/deployments
-
-apiVersion: apps/v1beta1    #API版本
-kind: Deployment            #脚本类型
-metadata:                   
-  name: deployment-example  #部署名称
+------------------------------- yaml 创建带数据卷的nginx POD  已成功 -------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+    name: test-pd-1
+    labels:
+        app: lb-1
 spec:
-  replicas: 2               #副本数量
-  revisionHistoryLimit: 10  #副本历史数量
-  template:                 
-    metadata:
-      labels:
-        app: nginx          #标签
-    spec:
-      containers:           
-      - name: nginx         #容器名称
-        image: nginx:1.10   #容器镜像及版本
-        ports:              #容器端口号 
-        - containerPort: 80
+    containers:
+      - name: test-container
+        image: nginx:alpine
+        ports:              
+            - containerPort: 80
+        volumeMounts:
+            - mountPath: /usr/share/nginx/html
+              name: cache-volume
+    volumes:
+        - name: cache-volume
+          emptyDir: {}
+  
+	
+------------------------------- 创建一个部署（含nginx容器和数据卷）创建一个服务来暴露端口  成功 -------------------------------
 
-#指定命名空间
-#
+
+apiVersion: apps/v1beta1   #API版本
+kind: Deployment           #创建类型 部署
+metadata:                             #元数据
+    name: deployment-example  #部署名称
+spec:
+    replicas: 1               #副本数量
+    revisionHistoryLimit: 10   #副本历史数量
+    selector:                  #标签选择器
+        matchLabels:           #匹配标签
+            app: nginx         #匹配标签内容
+    template:                  #pod模板
+        metadata:              #元数据
+            labels:            #标签定义
+                app: nginx     #pod标签
+        spec:
+            containers:        #容器定义 
+              - name: test-container   #容器名称
+                image: nginx:alpine    #容器镜像及版本
+                ports:                 #容器端口定义
+                    - containerPort: 80  #容器端口号
+                volumeMounts:             #数据卷定义
+                    - mountPath: /usr/share/nginx/html    #数据卷容器内挂载地址
+                      name: cache-volume                  #数据卷名称，用于匹配数据卷定义部分的名称
+            volumes:                                      #数据卷定义
+                - name: cache-volume                      #数据卷名称
+                  emptyDir: {}                            #数据卷类型及内容设置
+				  
+	          
+kind: Service
+apiVersion: v1
+metadata:
+    name: my-service           #服务名称
+spec:
+    selector:
+        app: nginx             #标签选择
+    type: NodePort             #ClusterIP 内部服务 NodePort 指定外部端口（调试模式） LoadBalancer 独有IP外部访问
+    ports:
+      - protocol: TCP
+        port: 8080      #POD端口
+        targetPort: 80
+        nodePort: 32222
+
+
+kind: Service
+apiVersion: v1
+metadata:
+    name: my-service1          
+spec:
+    selector:
+        app: nginx             
+    type: LoadBalancer             
+    ports:
+      - protocol: TCP
+        port: 80
+        targetPort: 80
+		
+---------------------------------------- yaml nvmp --------------------------------------------
+
+apiVersion: apps/v1beta1   #API版本
+kind: Deployment           #创建类型 部署
+metadata:                             #元数据
+    name: deployment-nvmp  #部署名称
+spec:
+    replicas: 1               #副本数量
+    revisionHistoryLimit: 10   #副本历史数量
+    selector:                  #标签选择器
+        matchLabels:           #匹配标签
+            app: nvmp         #匹配标签内容
+    template:                  #pod模板
+        metadata:              #元数据
+            labels:            #标签定义
+                app: nvmp     #pod标签
+        spec:
+            containers:        #容器定义 
+              - name: nvmp-container   #容器名称
+                image: 192.168.6.3:5000/cyberzone-nvmp:1.0    #容器镜像及版本
+                command: ["/app/auto_service.sh"]
+                ports:                 #容器端口定义
+                    - containerPort: 80  #容器端口号
+                volumeMounts:             #数据卷定义
+                    - mountPath: /var/www    #数据卷容器内挂载地址
+                      name: dv-nvmp-src                  #数据卷名称，用于匹配数据卷定义部分的名称
+                    - mountPath: /var/log/apache2    #数据卷容器内挂载地址
+                      name: dv-nvmp-log                  #数据卷名称，用于匹配数据卷定义部分的名称
+            volumes:                                      #数据卷定义
+                - name: dv-nvmp-src                      #数据卷名称
+                  emptyDir: {}                            #数据卷类型及内容设置
+                - name: dv-nvmp-log                        #数据卷名称
+                  emptyDir: {}                            #数据卷类型及内容设置
+				  
+			
+				  
+				  
+kind: Service
+apiVersion: v1
+metadata:
+    name: nvmp-service          
+spec:
+    selector:
+        app: nvmp         
+    type: LoadBalancer             
+    ports:
+      - protocol: TCP
+        port: 18080
+        targetPort: 80
+
+      
