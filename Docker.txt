@@ -380,9 +380,9 @@ free -m
 apt-cache madison docker-ce
 apt-cache madison docker-ce-cli
 #安装指定版本docker
-sudo apt-get install docker-ce=5:18.09.8~3-0~ubuntu-bionic \
-sudo apt-get install docker-ce-cli=5:18.09.8~3-0~ubuntu-bionic \
-sudo apt-get install containerd.io \
+sudo apt-get install -y docker-ce=5:18.09.8~3-0~ubuntu-bionic 
+sudo apt-get install -y docker-ce-cli=5:18.09.8~3-0~ubuntu-bionic 
+sudo apt-get install -y containerd.io 
 
 #更新
 apt-get update && apt-get install -y apt-transport-https
@@ -444,6 +444,7 @@ kubeadm join 10.0.0.17:6443 --token o41vfj.wnoe4to53697nu56 \
 ls /etc/kubernetes/manifests/
 etcd.yaml  kube-apiserver.yaml  kube-controller-manager.yaml  kube-scheduler.yaml
 
+#安装网络组件
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 
 
@@ -480,7 +481,7 @@ kubectl create -f  kubernetes-dashboard.yaml
 The connection to the server localhost:8080 was refused - did you specify the right host or port?
 #出现这个问题的原因是kubectl命令需要使用kubernetes-admin来运行，解决方法如下，将主节点中的【/etc/kubernetes/admin.conf】文件拷贝到从节点相同目录下，然后配置环境变量：
 echo "export KUBECONFIG=/etc/kubernetes/admin.conf" >> ~/.bash_profile
-立即生效
+#立即生效
 source ~/.bash_profile
 
 #查看面板的运行状态
@@ -507,7 +508,7 @@ NAME                   TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        
 kube-dns               ClusterIP   10.96.0.10      <none>        53/UDP,53/TCP,9153/TCP   14h
 kubernetes-dashboard   NodePort    10.101.98.185   <none>        443:30414/TCP            2m42s
 
-#查看访问Dashboard的认证令牌
+#查看访问Dashboard的认证令牌（所有用户）
 kubectl describe secrets -n kube-system $(kubectl -n kube-system get secret | awk ‘/dashboard-admin/{print $1}’)
 
 #创建dashboard管理用户
@@ -549,7 +550,20 @@ spec:
         - name: cache-volume
           emptyDir: {}
   
-
+kind: Service
+apiVersion: v1
+metadata:
+    name: my-sv-1           #服务名称
+spec:
+    selector:
+        app: lb-1             #标签选择
+    type: NodePort             #ClusterIP 内部服务 NodePort 指定外部端口（调试模式） LoadBalancer 独有IP外部访问
+    ports:
+      - protocol: TCP
+        port: 8080      #POD端口
+        targetPort: 80
+        nodePort: 32222
+		
 
 ---------------------------------- - yaml格式的pod定义文件完整内容：-----------------------------------------------
 apiVersion: v1       #必选，版本号，例如v1
