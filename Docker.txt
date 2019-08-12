@@ -366,22 +366,34 @@ docker run -d --restart=always -p 8080:8080 --name registry-web --link registry 
 
 
 *********************************************************  K8s安装 ********************************************************
+使用root用户安装
+
+#关闭交换内存
+swapoff -a
+#修改配置文件关闭交换内存,注释其中swap相关行
+vi /etc/fstab
+# 查看是否关闭交换内存
+free -m
+
+
 #查看可用版本
 apt-cache madison docker-ce
 apt-cache madison docker-ce-cli
-#安装指定版本
+#安装指定版本docker
 sudo apt-get install docker-ce=5:18.09.8~3-0~ubuntu-bionic \
 sudo apt-get install docker-ce-cli=5:18.09.8~3-0~ubuntu-bionic \
 sudo apt-get install containerd.io \
 
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-
+#更新
 apt-get update && apt-get install -y apt-transport-https
+#安装证书
 curl https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg | apt-key add - 
+#编辑k8s源
 vim /etc/apt/sources.list.d/kubernetes.list
 deb https://mirrors.aliyun.com/kubernetes/apt/ kubernetes-xenial main
 apt-get update
 
+#拉取K8S相关镜像
 docker pull mirrorgooglecontainers/kube-apiserver-amd64:v1.14.3
 docker pull mirrorgooglecontainers/kube-controller-manager-amd64:v1.14.3
 docker pull mirrorgooglecontainers/kube-scheduler-amd64:v1.14.3
@@ -389,7 +401,7 @@ docker pull mirrorgooglecontainers/kube-proxy-amd64:v1.14.3
 docker pull mirrorgooglecontainers/pause:3.1
 docker pull mirrorgooglecontainers/etcd-amd64:3.3.10
 docker pull coredns/coredns:1.3.1
-
+#给docker镜像打tag
 docker tag mirrorgooglecontainers/kube-apiserver-amd64:v1.14.3 k8s.gcr.io/kube-apiserver:v1.14.3
 docker tag mirrorgooglecontainers/kube-controller-manager-amd64:v1.14.3 k8s.gcr.io/kube-controller-manager:v1.14.3
 docker tag mirrorgooglecontainers/kube-scheduler-amd64:v1.14.3 k8s.gcr.io/kube-scheduler:v1.14.3
@@ -398,28 +410,48 @@ docker tag mirrorgooglecontainers/pause:3.1 k8s.gcr.io/pause:3.1
 docker tag mirrorgooglecontainers/etcd-amd64:3.3.10 k8s.gcr.io/etcd:3.3.10
 docker tag coredns/coredns:1.3.1 k8s.gcr.io/coredns:1.3.1
 
-
-
+#安装k8S基础组件
 apt-get install -y kubelet=1.14.3-00 kubeadm=1.14.3-00 kubectl=1.14.3-00
+#编辑Docker配置文件,添加下面内容,适配K8S的文件系统
+vim /etc/docker/daemon.json
+{
+  "exec-opts": ["native.cgroupdriver=systemd"]
+}
+
+#初始化Master节点
+kubeadm init --kubernetes-version=v1.14.3 --pod-network-cidr=10.244.0.0/16 --service-cidr=10.96.0.0/12 
+#初始化完成后显示下面的内容,需要执行其中的三条命令
+------------------------------------------
+Your Kubernetes control-plane has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+kubeadm join 10.0.0.17:6443 --token o41vfj.wnoe4to53697nu56 \
+    --discovery-token-ca-cert-hash sha256:5c8a89fff536197e272c7cd1263d2bc37be20fda144086e9fb6e986acea019c2 
+-----------------------------------------------------------------------------------
+
+#k8S核心组件
+ls /etc/kubernetes/manifests/
+etcd.yaml  kube-apiserver.yaml  kube-controller-manager.yaml  kube-scheduler.yaml
+
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 
 
+#安装kubernetes-dashboard
+docker pull mirrorgooglecontainers/kubernetes-dashboard-amd64:v1.10.1
+docker tag mirrorgooglecontainers/kubernetes-dashboard-amd64:v1.10.1 k8s.gcr.io/kubernetes-dashboard-amd64:v1.10.1
+#注意脚本中的版本号                                                  k8s.gcr.io/kubernetes-dashboard-amd64:v1.10.1
 
-您可以访问kubernetes-dashboard: https://192.168.42.136:30000
-用下面输出的token登录kubernetes-dashboard
-eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlLXN5c3RlbSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi10b2tlbi1ocnFqNiIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50Lm5hbWUiOiJhZG1pbiIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6ImM4MzNjYWUxLWI5YjQtMTFlOS1iYWFiLTAwMGMyOTBkMWMyNiIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDprdWJlLXN5c3RlbTphZG1pbiJ9.M7xhfp9RPQTUOvJqUEXEosIUdap_j_0lH1i0QN5heh8oUWee8BnjNmZsKlgoXI-uOubRCKwDP7QvfHcvz34EWzfPifau3Jp6jvckdNUBkPMQvAneY6xlWDkS6gMHwyNu1wzqGssglMvjALuLgW1lRSgGf4b6ldSje0phQ4eMn-JQU30-Idtnas_rSROsmk658qRXUGopPHrnjjdAvl_c94SGVMBg5KKGSDkczFvBn3P5SM-BW-djdyGRgZ47AD1FwJkHvjyTUXEjBLlnoRHy_93jAdIod-jTaJGR3jjOmrcmEh2vOKsuo8WVjRTxkWIQi14q94Gb-qQXnJ1XW3EoRA
-
-
-
-
-
-
-
-
-
-kubeadm init --kubernetes-version=v1.14.3 --pod-network-cidr=10.244.0.0/16 --service-cidr=10.96.0.0/12
-
-docker pull mirrorgooglecontainers/kubernetes-dashboard-amd64:v1.10.0
-docker tag mirrorgooglecontainers/kubernetes-dashboard-amd64:v1.10.0 k8s.gcr.io/kubernetes-dashboard-amd64:v1.10.0
 
 wget http://pencil-file.oss-cn-hangzhou.aliyuncs.com/blog/kubernetes-dashboard.yaml
 
@@ -444,16 +476,79 @@ spec:
 kubectl create -f  kubernetes-dashboard.yaml
 
 
-systemctl start etcd
-systemctl start docker
-systemctl start kube-apiserver
-systemctl start kube-controller-manager
-systemctl start kube-scheduler
-systemctl start kubelet
-systemctl start kube-proxy
+[root@k8snode1 kubernetes]# kubectl get pod
+The connection to the server localhost:8080 was refused - did you specify the right host or port?
+#出现这个问题的原因是kubectl命令需要使用kubernetes-admin来运行，解决方法如下，将主节点中的【/etc/kubernetes/admin.conf】文件拷贝到从节点相同目录下，然后配置环境变量：
+echo "export KUBECONFIG=/etc/kubernetes/admin.conf" >> ~/.bash_profile
+立即生效
+source ~/.bash_profile
+
+#查看面板的运行状态
+kubectl get deployment kubernetes-dashboard -n kube-system
+NAME                   READY   UP-TO-DATE   AVAILABLE   AGE
+kubernetes-dashboard   1/1     1            1           31s
+
+#查看pod运行状态
+kubectl get pods -n kube-system -o wide
+NAME                                    READY   STATUS    RESTARTS   AGE    IP           NODE        NOMINATED NODE   READINESS GATES
+coredns-fb8b8dccf-ddbvg                 1/1     Running   5          14h    10.244.0.4   localhost   <none>           <none>
+coredns-fb8b8dccf-rxjnb                 1/1     Running   4          14h    10.244.0.3   localhost   <none>           <none>
+etcd-localhost                          1/1     Running   1          14h    10.0.0.17    localhost   <none>           <none>
+kube-apiserver-localhost                1/1     Running   4          14h    10.0.0.17    localhost   <none>           <none>
+kube-controller-manager-localhost       1/1     Running   21         14h    10.0.0.17    localhost   <none>           <none>
+kube-flannel-ds-amd64-lrv4w             1/1     Running   0          6h4m   10.0.0.17    localhost   <none>           <none>
+kube-proxy-q897v                        1/1     Running   1          14h    10.0.0.17    localhost   <none>           <none>
+kube-scheduler-localhost                1/1     Running   16         14h    10.0.0.17    localhost   <none>           <none>
+kubernetes-dashboard-5f57845f9d-d2hpj   1/1     Running   0          116s   10.244.0.6   localhost   <none>           <none>
+
+#查看服务运行状态
+kubectl get services -n kube-system
+NAME                   TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                  AGE
+kube-dns               ClusterIP   10.96.0.10      <none>        53/UDP,53/TCP,9153/TCP   14h
+kubernetes-dashboard   NodePort    10.101.98.185   <none>        443:30414/TCP            2m42s
+
+#查看访问Dashboard的认证令牌
+kubectl describe secrets -n kube-system $(kubectl -n kube-system get secret | awk ‘/dashboard-admin/{print $1}’)
+
+#创建dashboard管理用户
+kubectl create serviceaccount dashboard-admin -n kube-system
+
+#绑定用户为集群管理用户
+kubectl create clusterrolebinding dashboard-cluster-admin --clusterrole=cluster-admin --serviceaccount=kube-system:dashboard-admin
+
+#获取tocken
+kubectl describe secret -n kube-system dashboard-admin
+token:      eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlLXN5c3RlbSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJkYXNoYm9hcmQtYWRtaW4tdG9rZW4tbTZianAiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGFzaGJvYXJkLWFkbWluIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiNmQyYzRkMzMtYmI0OC0xMWU5LTgxY2EtMDAwYzI5MWEzODdhIiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50Omt1YmUtc3lzdGVtOmRhc2hib2FyZC1hZG1pbiJ9.NUplen7k7iJKiDgyyL7CTb38dXy2ixvfjVqLDw9N5YVh6KkCHYm6MyHVl7owVh47mwSITZCaw8ashEU1XrvU60Vl0md6GrDdlyAnY6k-UZCB03NeRxNxYdWD4d0YbD82W-Do8F15Ujw6o-bXyN7HRRbQALEBh2SUEEGsSslxlrC3DLl8EqdJa_LYXrIu0nszioLDYQNoUKetzRrRKF63Bg0utO8NEdksQARE0iG4YPEdr8X1y3-I-7_i6vc9wWjriFNqIEaJAaqdHYshztxxFdLaMRz-fkWMUvW6bgn1gfKiBuCfM2BFlXvWo-K7OHU2oRPNgHBD6ukLZAc-2DDdUA
+
+
+#仪表板的访问端口,使用火狐浏览器访问
+https://10.0.0.17:30414/
 
 
 
+#默认情况下kubernetes中的master并不能运行用户的Pod. 因此需要删除 Train，允许master执行Pod(仅仅在调试环境一台机器即做master又做node的情况下)
+kubectl taint nodes --all node-role.kubernetes.io/master-
+
+------------------------------- yaml 创建带数据卷的nginx POD  已成功 -------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+    name: test-pd-1
+    labels:
+        app: lb-1
+spec:
+    containers:
+      - name: test-container
+        image: nginx:alpine
+        ports:              
+            - containerPort: 80
+        volumeMounts:
+            - mountPath: /usr/share/nginx/html
+              name: cache-volume
+    volumes:
+        - name: cache-volume
+          emptyDir: {}
+  
 
 
 ---------------------------------- - yaml格式的pod定义文件完整内容：-----------------------------------------------
@@ -535,26 +630,7 @@ spec:         #必选，Pod中容器的详细定义
           path: string
 
 
-------------------------------- yaml 创建带数据卷的nginx POD  已成功 -------------------------------
-apiVersion: v1
-kind: Pod
-metadata:
-    name: test-pd-1
-    labels:
-        app: lb-1
-spec:
-    containers:
-      - name: test-container
-        image: nginx:alpine
-        ports:              
-            - containerPort: 80
-        volumeMounts:
-            - mountPath: /usr/share/nginx/html
-              name: cache-volume
-    volumes:
-        - name: cache-volume
-          emptyDir: {}
-  
+
 	
 ------------------------------- 创建一个部署（含nginx容器和数据卷）创建一个服务来暴露端口  成功 -------------------------------
 
