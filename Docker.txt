@@ -347,6 +347,7 @@ composer create-project --prefer-dist laravel/laravel blog 5.5
 #docker容器管理UI工具
 docker run -d -p 9000:9000 \
     --restart=always \
+	--privileged=true \
     -v /var/run/docker.sock:/var/run/docker.sock \
     --name prtainer-test \
     portainer/portainer
@@ -754,3 +755,9 @@ spec:
       - protocol: TCP
         port: 18080
         targetPort: 80
+
+
+docker volume create portainer_data  //是否能解决数据卷数据拷贝出来的问题？？？
+
+
+
