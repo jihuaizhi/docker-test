@@ -759,5 +759,15 @@ spec:
 
 docker volume create portainer_data  //是否能解决数据卷数据拷贝出来的问题？？？
 
+PVE服务重启命令
+
+pvesh get /nodes/{node}/storage/{storage}/content
+pvesh get /nodes/cz61/storage/directory/content
+
+service pveproxy restart
+
+
+
+
 
 
